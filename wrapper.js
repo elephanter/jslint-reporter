@@ -74,22 +74,26 @@ var main = function(args) {
 	}
 
 	var doLint = function(filepath) {
+		//override for lint
+		transformWarning = function(item, prefix) {
+			return {
+				line: item.line,
+				character: item.column,
+				reason: item.message
+			};
+		};
+
 		var src = fs.readFileSync(filepath, "utf-8");
 		var sandbox = {
 			SRC: src,
 			OPTS: opts
 		};
-		var code = LINT.root + "(SRC, OPTS); var data = " + LINT.root + ".data();";
+
+		var code = "var data = "+LINT.root + "(SRC, OPTS);";
 		vm.runInNewContext(jslint + "\n" + code, sandbox);
 
 		var data = sandbox.data;
-		var implied = (data.implieds || []).map(function(item) {
-			return transformWarning(item, "implied global");
-		});
-		var unused = (data.unused || []).map(function(item) {
-			return transformWarning(item, "unused variable");
-		});
-		return (data.errors || []).concat(implied).concat(unused);
+		return data.warnings.map(function(item){ return transformWarning(item); });
 	};
 
 	var errors = [];
